@@ -35,7 +35,7 @@
           {{ numericFormat(parseFloat(account?.bal)) }}
         </span>
         <span class="account-bal inactive" v-else>-.---,--</span>
-        <span class="account-curr">{{ account?.curr || "--" }}</span>
+        <span class="account-curr ml-1">{{ account?.curr || "--" }}</span>
         <span
           v-if="!disableDropDown"
           :class="{
@@ -113,9 +113,16 @@
     },
     async mounted() {
       if (this.account.isBarter) {
-        this.barterLimits = {
-          min: await this.account._obj.getLowLimit(),
-          max: await this.account._obj.getHighLimit(),
+        try {
+          const min = await this.account._obj.getLowLimit()
+          const max = await this.account._obj.getHighLimit()
+          this.barterLimits = { min, max }
+        } catch (err) {
+          console.error(
+            "An unexpected server error occurred while fetching barter limits",
+            err
+          )
+          return
         }
       }
     },
@@ -164,6 +171,9 @@
     }
   }
 
+  .sub-accounts {
+    margin-left: 1.6em;
+  }
   .account-name,
   .account-bal,
   .account-curr {

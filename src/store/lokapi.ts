@@ -170,10 +170,6 @@ export function lokapiStoreFactory(lokApiService: any, passwordUtils: any) {
         }
         commit("setHasCreditRequestValidationRights", hasRight)
       },
-      async fetchPendingCreditRequests({ commit, state }: any) {
-        const requests = await lokApiService.getCreditRequests()
-        commit("setPendingCreditRequests", requests)
-      },
     },
     mutations: {
       auth_request(state: any) {

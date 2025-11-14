@@ -1,8 +1,8 @@
 <template>
   <div class="modal is-active" ref="paymentConfirmation">
     <div class="modal-background"></div>
-    <div class="modal-card">
-      <header class="modal-card-head" :class="$modal.args?.value[0].type">
+    <div class="modal-card" v-if="$modal.args?.value?.[0]">
+      <header class="modal-card-head" :class="$modal.args?.value?.[0]?.type">
         <p class="modal-card-title is-title-shrink">
           {{
             {
@@ -10,7 +10,7 @@
               paymentConfirmation: $gettext("Payment confirmation"),
               topup: $gettext("Top-up details"),
               reconversion: $gettext("Reconversion details"),
-            }[$modal.args?.value[0].type]
+            }[$modal.args?.value?.[0]?.type]
           }}
         </p>
         <button
@@ -23,7 +23,7 @@
       <section class="modal-card-body">
         <div class="body-content is-size-4">
           <p
-            v-if="$modal.args?.value[0]?.source == 'askTopUp'"
+            v-if="$modal.args?.value?.[0]?.source == 'askTopUp'"
             class="mt-2 mb-5 is-size-5 notification is-danger is-light"
           >
             {{
@@ -32,26 +32,35 @@
               )
             }}
           </p>
-          <p class="custom-card-title has-text-weight-bold">
+          <p
+            class="custom-card-title has-text-weight-bold"
+            v-if="
+              $modal.args?.value?.[0]?.transaction.fromTopUpsPendingForApproval
+            "
+          >
+            {{ $gettext("Pending top-up requests") }}
+          </p>
+          <p v-else class="custom-card-title has-text-weight-bold">
             {{
               {
-                transactionDetail: $modal.args?.value[0].transaction.pending
+                transactionDetail: $modal.args?.value?.[0]?.transaction.pending
                   ? $gettext("Transaction sent")
                   : $gettext("Transaction processed"),
                 paymentConfirmation: $gettext("Payment sent"),
                 topup:
-                  typeof $modal.args?.value[0].transaction.cancel !==
+                  typeof $modal.args?.value?.[0]?.transaction.cancel !==
                   "undefined"
                     ? $gettext("Top-up requested")
                     : $gettext("Top-up received"),
                 reconversion: $gettext("Reconversion %{ reconversionStatus }", {
                   reconversionStatus,
                 }),
-              }[$modal.args?.value[0].type]
+              }[$modal.args?.value?.[0]?.type]
             }}
           </p>
+
           <div
-            v-if="$modal.args?.value[0].type == 'topup'"
+            v-if="$modal.args?.value?.[0]?.type == 'topup'"
             class="confirm-icon-container mb-2"
           >
             <fa-icon icon="plus-circle" class="confirm-icon fa-thin" />
@@ -61,7 +70,7 @@
           </div>
 
           <p
-            v-if="$modal.args?.value[0].type != 'topup'"
+            v-if="$modal.args?.value?.[0]?.type != 'topup'"
             class="amount has-text-weight-bold is-size-4"
             :class="{
               cm: transactionsTags.includes('barter'),
@@ -77,27 +86,27 @@
                     })
                   : $gettext("Received %{amount}", {
                       amount: `${numericFormat(t.amount)} ${t.currency}`,
-                    }))($modal.args?.value[0].transaction)
+                    }))($modal.args?.value?.[0]?.transaction)
             }}
           </p>
-          <div v-if="$modal.args?.value[0].type !== 'reconversion'">
-            <h2 v-if="$modal.args?.value[0].transaction.isTopUp">
+          <div v-if="$modal.args?.value?.[0]?.type !== 'reconversion'">
+            <h2 v-if="$modal.args?.value?.[0]?.transaction.isTopUp">
               <h2
-                v-if="$modal.args?.value[0].type == 'topup'"
+                v-if="$modal.args?.value?.[0]?.type == 'topup'"
                 class="frame3-sub-title"
               >
                 {{
-                  $modal.args?.value[0].transaction.paid === true
+                  $modal.args?.value?.[0]?.transaction.paid === true
                     ? $gettext(
                         "This top-up request is waiting for an administrator of your local currency to validate it"
                       )
-                    : typeof $modal.args?.value[0].transaction.cancel !==
+                    : typeof $modal.args?.value?.[0]?.transaction.cancel !==
                         "undefined" &&
-                      $modal.args?.value[0].transaction.paid === false &&
-                      $modal.args?.value[0].account.isTopUpAllowed &&
-                      ($modal.args?.value[0].transaction.requester ===
+                      $modal.args?.value?.[0]?.transaction.paid === false &&
+                      $modal.args?.value?.[0]?.account.isTopUpAllowed &&
+                      ($modal.args?.value?.[0]?.transaction.requester ===
                         undefined ||
-                        $modal.args?.value[0].transaction.requester.id ===
+                        $modal.args?.value?.[0]?.transaction.requester.id ===
                           userProfile.id)
                     ? $gettext(
                         "Your top-up request is waiting for you to pay it or delete it"
@@ -106,8 +115,8 @@
                 }}
                 <div
                   v-if="
-                    $modal.args?.value[0].transaction.requester !== undefined &&
-                    $modal.args?.value[0].transaction.requester.id !==
+                    $modal.args?.value?.[0]?.transaction.requester !== undefined &&
+                    $modal.args?.value?.[0]?.transaction.requester.id !==
                       userProfile.id
                   "
                 >
@@ -122,7 +131,7 @@
                       hide-overflow
                     "
                   >
-                    {{ $modal.args?.value[0].transaction.requester.name }}
+                    {{ $modal.args?.value?.[0]?.transaction.requester.name }}
                   </p>
                 </div>
               </h2>
@@ -197,11 +206,11 @@
       >
         <div
           v-if="
-            $modal.args?.value[0].type == 'topup' &&
-            $modal.args?.value[0].transaction.paid === false &&
-            $modal.args?.value[0].account.isTopUpAllowed &&
-            ($modal.args?.value[0].transaction?.requester === undefined ||
-              $modal.args?.value[0].transaction?.requester?.id ===
+            $modal.args?.value?.[0]?.type == 'topup' &&
+            $modal.args?.value?.[0]?.transaction.paid === false &&
+            $modal.args?.value?.[0]?.account.isTopUpAllowed &&
+            ($modal.args?.value?.[0]?.transaction?.requester === undefined ||
+              $modal.args?.value?.[0]?.transaction?.requester?.id ===
                 this.userProfile.id)
           "
           class="ml-2 mr-2"
@@ -222,6 +231,13 @@
         </div>
         <button
           class="button custom-button-modal has-text-weight-medium"
+          @click="handleConfirm"
+          v-if="$modal.args?.value?.[0]?.transaction.fromTopUpsPendingForApproval"
+        >
+          <span>{{ $gettext("Confirm") }}</span>
+        </button>
+        <button
+          class="button custom-button-modal has-text-weight-medium"
           @click="$modal.close()"
         >
           <span>{{ $gettext("Ok") }}</span>
@@ -237,7 +253,7 @@
   import { getCurrentInstance } from "vue"
   import moment from "moment"
   import { UIError } from "../exception"
-  import { showSpinnerMethod } from "@/utils/showSpinner"
+  import { showSpinnerMethod, replaceWithLoader } from "@/utils/showSpinner"
   import { debounceMethod } from "@/utils/debounce"
   import applyDecorators from "@/utils/applyDecorators"
   import TransactionItem from "./TransactionItem.vue"
@@ -323,7 +339,7 @@
         )
       },
       transactionDate() {
-        const transaction = this.$modal.args?.value[0].transaction
+        const transaction = this.$modal.args?.value?.[0]?.transaction
 
         const transactions = Array.isArray(transaction)
           ? transaction
@@ -333,28 +349,11 @@
       },
 
       transactions() {
-        const transaction = this.$modal.args?.value[0].transaction
+        const transaction = this.$modal.args?.value?.[0]?.transaction
         return Array.isArray(transaction) ? transaction : [transaction]
       },
       transactionCurrency() {
         return this.transactions[0].currency
-      },
-      transactionType() {
-        const transaction = this.$modal.args?.value[0].transaction
-        let transactionType = ""
-        if (
-          transaction.amount < 0 &&
-          transaction.parent.parent.safeWalletRecipient?.name ===
-            transaction.related
-        ) {
-          transactionType = "reconversion"
-        } else if (transaction.isTopUp) {
-          if (transaction.paid) transactionType = "topup"
-          else transactionType = "pendingTopup"
-        } else {
-          transactionType = "transactionDetail"
-        }
-        return transactionType
       },
       transactionTotalAmount() {
         let totalCents = this.transactions
@@ -375,11 +374,64 @@
       },
     },
     methods: {
+      validateRequest: applyDecorators(
+        [
+          showSpinnerMethod(function (
+            this: any,
+            isLoading: boolean,
+            request: any
+          ) {
+            return replaceWithLoader.apply(this, [
+              `#validate-${request.jsonData.odoo.credit_id}`,
+              "2em",
+            ])
+          }),
+        ],
+        async function (this: any, request: any): Promise<void> {
+          async function wait(t: any) {
+            await new Promise((resolve) => setTimeout(resolve, t))
+          }
+          try {
+            await this.$modal.args?.value?.[0]?.transaction.validate()
+          } catch (err: any) {
+            if (err.message === "User canceled the dialog box") {
+              // A warning message should have already been sent
+              return
+            }
+            this.$msg.error(
+              this.$gettext(
+                "An issue occured upon the approval of the credit " +
+                  "request of %{ name }",
+                {
+                  name: request.related,
+                }
+              )
+            )
+            throw err
+          } finally {
+            this.validationRequestOngoing.splice(
+              this.validationRequestOngoing.indexOf(request),
+              1
+            )
+          }
+          await this.$lokapi.getCreditRequests()
+          this.$msg.success(
+            this.$gettext(
+              "Top up request from %{ name } of %{ amount } %{ currency } was validated.",
+              {
+                name: request.related,
+                amount: request.amount,
+                currency: request.currency,
+              }
+            )
+          )
+        }
+      ),
       async payTopUpRequest(): Promise<void> {
         // XXXvlab: we would need to launch regular checks
         // here to acknowledge the payment
         window.open(
-          this.$modal.args?.value[0].transaction.jsonData.odoo.order_url,
+          this.$modal.args?.value?.[0]?.transaction.jsonData.odoo.order_url,
           "_blank"
         )
         if (this.promiseWaitPayment) {
@@ -388,7 +440,7 @@
         }
         let paymentStatus = null
         let orderId =
-          this.$modal.args?.value[0].transaction.jsonData.odoo.order_id
+          this.$modal.args?.value?.[0]?.transaction.jsonData.odoo.order_id
         try {
           this.promiseWaitPayment = this.waitPayment(orderId)
           paymentStatus = await this.promiseWaitPayment
@@ -410,7 +462,7 @@
           return
         }
         let myCurrentOrderId =
-          this.$modal.args?.value[0].transaction.jsonData.odoo.order_id
+          this.$modal.args?.value?.[0]?.transaction.jsonData.odoo.order_id
         if (myCurrentOrderId !== orderId) {
           // The modal was likely closed while waiting
           return
@@ -433,7 +485,7 @@
               return
             }
             let myCurrentOrderId =
-              this.$modal.args?.value[0].transaction.jsonData.odoo.order_id
+              this.$modal.args?.value?.[0]?.transaction.jsonData.odoo.order_id
             if (myCurrentOrderId !== orderId) {
               // The modal was likely closed while waiting
               clearInterval(interval)
@@ -466,7 +518,7 @@
         [debounceMethod, showSpinnerMethod(".modal-card-body")],
         async function (this: any): Promise<void> {
           try {
-            await this.$modal.args?.value[0].transaction.cancel()
+            await this.$modal.args?.value?.[0]?.transaction.cancel()
           } catch (err) {
             throw new UIError(
               this.$gettext(
@@ -482,9 +534,20 @@
         }
       ),
       async closeAndRefresh(): Promise<void> {
-        this.$modal.args?.value[0].refreshTransaction()
-        this.$modal.args?.value[0].refreshAccounts(true)
+        this.$modal.args?.value?.[0].refreshTransaction()
+        this.$modal.args?.value?.[0].refreshAccounts(true)
         this.$modal.close()
+      },
+      async handleConfirm(): Promise<void> {
+        const payload = this.$modal.args?.value?.[0]
+        const maybeCallback = payload?.onConfirm
+        try {
+          if (typeof maybeCallback === "function") {
+            await maybeCallback(payload?.transaction)
+          }
+        } finally {
+          this.$modal.close()
+        }
       },
     },
   })

@@ -35,17 +35,9 @@
           v-for="transaction in transactions"
           :key="transaction"
           :transaction="transaction"
-          @click="
-            $modal.open('ConfirmPaymentModal', {
-              transaction,
-              type: transaction.isReconversion
-                ? 'reconversion'
-                : transaction.isTopUp
-                ? 'topup'
-                : 'transactionDetail',
-              account,
-            })
-          "
+          :account="account"
+          @refreshTransaction="$emit('triggerTransactionRefresh', false, this)"
+          @refreshAccounts="$emit('triggerTransactionRefresh', false, this)"
         />
         <div v-if="transactions.length" class="has-text-centered mt-5">
           <button
