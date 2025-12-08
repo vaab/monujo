@@ -112,6 +112,7 @@
       this.selectedRecipient = this.$modal.args.value[0].params.recipient
     },
     async mounted() {
+      this.downloadPdfFile()
       this.setFocus()
     },
     computed: {
@@ -120,7 +121,7 @@
       },
 
       ...mapModuleState("lokapi", ["userProfile"]),
-      ...mapGetters(["numericFormat", "dateFormat"]),
+      ...mapGetters(["numericFormat", "dateFormat", "dateTimeFormat"]),
     },
     methods: {
       setFocus(ref: string) {
@@ -128,6 +129,9 @@
       },
       downloadCsvFile() {
         ;(this.$refs.txList as any)?.downloadCsvFile?.()
+      },
+      downloadPdfFile() {
+        ;(this.$refs.txList as any)?.downloadPdfFile?.()
       },
       shareCsvFile() {
         ;(this.$refs.txList as any)?.shareCsvFile?.()
