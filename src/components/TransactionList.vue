@@ -165,15 +165,6 @@
             :transaction="transaction"
             :account="account"
           />
-          <div
-            v-if="
-              transactionBatchLoader.elements.length == 0 &&
-              !transactionBatchLoader.isNewBatchLoading.value
-            "
-            class="is-flex is-align-items-center is-justify-content-center"
-          >
-            {{ $gettext("No transaction found") }}
-          </div>
           <Loading
             v-if="transactionBatchLoader.isNewBatchLoading"
             v-model:active="transactionBatchLoader.isNewBatchLoading"
@@ -184,13 +175,13 @@
             :height="30"
           />
           <div
-            v-if="
-              transactionBatchLoader.hasNoMoreElements.value &&
-              transactionBatchLoader.elements.value.length === 0
+            v-else-if="
+              transactionBatchLoader.elements.length == 0 &&
+              !transactionBatchLoader.isNewBatchLoading.value
             "
             class="is-flex is-align-items-center is-justify-content-center"
           >
-            {{ $gettext("No transactions found") }}
+            {{ $gettext("No transaction found") }}
           </div>
         </div>
       </div>
