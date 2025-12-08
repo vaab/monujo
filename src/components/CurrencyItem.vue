@@ -95,6 +95,9 @@
 <style lang="scss" scoped>
   @import "../assets/custom-variables";
 
+  .currency {
+    cursor: pointer;
+  }
   .currency-name,
   .currency-bal,
   .currency-curr {

@@ -144,6 +144,7 @@
   @import "../assets/custom-variables";
   .account {
     font-size: 1.2rem;
+    cursor: pointer;
   }
   .custom-inner-card {
     container-type: inline-size;
