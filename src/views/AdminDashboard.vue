@@ -19,17 +19,21 @@
             </div>
             <div
               v-if="hasUserAccountValidationRights"
+              v-show="showPendingAccounts"
               class="mt-5 accounts card custom-card custom-card-padding"
             >
-              <PendingAccounts />
+              <PendingAccounts
+                @hasCredits="showPendingAccounts = $hasAccounts"
+              />
             </div>
           </div>
-          <div class="column is-half">
-            <div
-              v-if="hasCreditRequestValidationRights"
-              class="accounts card custom-card custom-card-padding"
-            >
-              <PendingCredits />
+          <div
+            v-if="hasCreditRequestValidationRights"
+            v-show="showPendingCredits"
+            class="column is-half"
+          >
+            <div class="accounts card custom-card custom-card-padding">
+              <PendingCredits @hasCredits="showPendingCredits = $hasCredits" />
             </div>
           </div>
         </div>
@@ -66,6 +70,8 @@
         refreshTransactionsToggle: false,
         refreshAccountsToggle: false,
         currency: null,
+        showPendingCredits: false,
+        showPendingAccounts: false,
       }
     },
     components: {

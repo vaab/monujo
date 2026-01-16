@@ -2,7 +2,7 @@
   <div
     class="account"
     :class="{
-      active: account.active,
+      active: account.active && account.isActiveAccount,
       'type-barter': account?._obj?.isBarter && account._obj.isBarter,
     }"
     @click="isSub || isAccountSelected || $emit('accountSelected', account)"
@@ -10,7 +10,11 @@
     <div class="custom-inner-card card px-5 py-2 is-flex">
       <div class="is-flex-grow-1 account-title">
         <slot name="name">default name</slot>
-        <Badge v-if="$config.disableBadges !== true" :object="account" />
+        <Badge
+          v-if="$config.disableBadges !== true"
+          :object="account"
+          :toggleRefreshBadge="toggleRefreshBadge"
+        />
         <div v-if="isTemporarilyUnavailable" class="account-backend error-msg">
           {{ $gettext("Temporarily unavailable - please refresh") }}
         </div>
@@ -18,7 +22,13 @@
           {{ account?.backend }}
         </div>
       </div>
-      <div class="barter-limits" v-if="account.isBarter">
+
+      <div class="barter-limits" v-if="!account.isActiveAccount">
+        <div class="max">"--"</div>
+        <div class="min">"--"</div>
+      </div>
+
+      <div class="barter-limits" v-else-if="account.isBarter">
         <div class="max">
           {{
             barterLimits?.max ? numericFormat(parseFloat(barterLimits.max)) : ""
@@ -31,7 +41,7 @@
         </div>
       </div>
       <div class="is-align-items-center is-flex bal">
-        <span class="account-bal" v-if="account?.active">
+        <span class="account-bal" v-if="account?.active && isActiveAccount">
           {{ numericFormat(parseFloat(account?.bal)) }}
         </span>
         <span class="account-bal inactive" v-else>-.---,--</span>
@@ -65,6 +75,7 @@
         class="mt-4 subaccount"
         @accountSelected="$emit('accountSelected', account)"
         :account="account"
+        :toggleRefreshBadge="toggleRefreshBadge"
       >
         <template v-slot:name>{{ account.name() }}</template>
       </BankAccountItem>
@@ -94,6 +105,7 @@
       account: Object,
       showSubAccounts: Boolean,
       disableDropDown: Boolean,
+      toggleRefreshBadge: Boolean,
     },
     data() {
       return {
@@ -107,6 +119,9 @@
           this.account.length == 1 &&
           this.account[0] instanceof LokapiExc.BackendUnavailableTransient
         )
+      },
+      isActiveAccount() {
+        return this.account.isActiveAccount
       },
       ...mapModuleState("lokapi", ["isMultiCurrency"]),
       ...mapGetters(["numericFormat"]),

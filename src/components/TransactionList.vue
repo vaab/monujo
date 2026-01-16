@@ -95,7 +95,10 @@
           <div class="mb-1 mt-3">
             <strong>{{ $gettext("Select recipient:") }}</strong>
           </div>
-          <div class="recipient-filter is-flex is-flex-direction-row">
+          <div
+            v-if="isRecipientLoaderReady"
+            class="recipient-filter is-flex is-flex-direction-row"
+          >
             <div class="recipient-filter-input">
               <model-list-select
                 :list="
@@ -145,6 +148,7 @@
       <div class="container is-fluid custom-heavy-line-separator"></div>
     </div>
     <section
+      v-if="transactionBatchLoader"
       ref="transactionsContainer"
       @scroll="transactionBatchLoader.getNextElements"
       class="modal-card-body"
@@ -245,71 +249,52 @@
         selectedTimeSpanType: "",
         selectedTimeSpanOffset: 0,
         selectedRecipientIdx: null,
-        recipientBatchLoader: null,
+        isRecipientLoaderReady: false,
+        recipientBatchLoader: {
+          elements: [],
+          isNewBatchLoading: false,
+          hasNoMoreElements: false,
+          getNextElements: () => {},
+          newGen: () => {},
+        },
         isTransactionsLoading: false,
-        transactionBatchLoader: {},
+        transactionBatchLoader: {
+          elements: [],
+          isNewBatchLoading: false,
+          hasNoMoreElements: false,
+          getNextElements: () => {},
+          newGen: () => {},
+        },
       }
     },
 
     created() {
-      let account
-      if (this.account._obj?.getTransactions) {
-        account = this.account._obj
-      } else {
-        account = this.account._obj.parent
-      }
-      const backend = account.parent
-      const searchRecipients = this.showAll
-        ? backend.searchAllRecipients
-        : backend.searchRecipients
-      this.recipientBatchLoader = UseBatchLoading({
-        genFactory: searchRecipients.bind(backend),
-        needMorePredicate: () => {
-          const div = this.$recipients
-          if (!div) return false
-          return div.scrollHeight - (div.scrollTop + div.offsetHeight) <= 50
-        },
-        onError: (e) => {
-          this.$msg.error(
-            this.$gettext(
-              "An unexpected issue occured while downloading recipient list"
-            )
-          )
-          throw e
-        },
-      })
-      this.transactionBatchLoader = UseBatchLoading({
-        genFactory: this.getTransactions.bind(this),
-        needMorePredicate: () => {
-          const div = this.$refs.transactionsContainer
-          if (!div) return false
-          return div.scrollHeight - (div.scrollTop + div.offsetHeight) <= 500
-        },
-        onError: () => {
-          this.$msg.error(
-            this.$gettext(
-              "An unexpected issue occured while downloading transaction list"
-            )
-          )
-        },
-      })
+      this.initPromise = this.initBatchLoaders()
     },
 
-    mounted() {
-      const $recipients = this.$el.querySelector(".menu")
+    async mounted() {
       this._recipientsScroll = new AbortController()
 
-      $recipients.addEventListener(
-        "scroll",
-        this.recipientBatchLoader.getNextElements.bind(
-          this.recipientBatchLoader
-        ),
-        this._recipientsScroll
-      )
-      this.$recipients = $recipients
-      this.recipientBatchLoader.newGen("")
+      const initPromise = this.initPromise
+      if (!initPromise) return
 
-      this.transactionBatchLoader.newGen("")
+      try {
+        await initPromise
+        const $recipients = this.$el.querySelector(".menu")
+        if (!$recipients) return
+        $recipients.addEventListener(
+          "scroll",
+          this.recipientBatchLoader.getNextElements.bind(
+            this.recipientBatchLoader
+          ),
+          this._recipientsScroll
+        )
+        this.$recipients = $recipients
+        this.recipientBatchLoader.newGen("")
+        this.transactionBatchLoader.newGen("")
+      } catch (e) {
+        console.error("Recipient loader init failed", e)
+      }
     },
     beforeUnmount() {
       this._recipientsScroll?.abort()
@@ -337,6 +322,50 @@
     },
 
     methods: {
+      async initBatchLoaders() {
+        let account
+        if (this.account._obj?.getTransactions) {
+          account = this.account._obj
+        } else {
+          account = this.account._obj.parent
+        }
+        const backend = account.parent
+        const searchRecipients = this.showAll
+          ? backend.searchAllRecipients
+          : backend.searchRecipients
+        this.recipientBatchLoader = UseBatchLoading({
+          genFactory: searchRecipients.bind(backend),
+          needMorePredicate: () => {
+            const div = this.$recipients
+            if (!div) return false
+            return div.scrollHeight - (div.scrollTop + div.offsetHeight) <= 50
+          },
+          onError: (e) => {
+            this.$msg.error(
+              this.$gettext(
+                "An unexpected issue occured while downloading recipient list"
+              )
+            )
+            throw e
+          },
+        })
+        this.transactionBatchLoader = UseBatchLoading({
+          genFactory: this.getTransactions.bind(this),
+          needMorePredicate: () => {
+            const div = this.$refs.transactionsContainer
+            if (!div) return false
+            return div.scrollHeight - (div.scrollTop + div.offsetHeight) <= 500
+          },
+          onError: () => {
+            this.$msg.error(
+              this.$gettext(
+                "An unexpected issue occured while downloading transaction list"
+              )
+            )
+          },
+        })
+        this.isRecipientLoaderReady = true
+      },
       async *getTransactions() {
         const account = this.account
         let gen

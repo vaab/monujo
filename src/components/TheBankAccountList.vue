@@ -94,32 +94,50 @@
           </a>
         </div>
       </div>
-      <div class="section-card" v-else-if="activeVirtualAccounts.length !== 0">
+      <div
+        class="section-card"
+        v-else-if="
+          activeVirtualAccounts.length !== 0 &&
+          pathologicalVirtualAccounts.length === 0
+        "
+      >
         <h2 class="custom-card-title title-card">
           {{ $gettext("your accounts") }}
         </h2>
-        <BankAccountItem
-          v-for="a in activeVirtualAccountsMiddleware"
-          class="mb-5"
-          :class="{
-            selected:
-              a?.active && a?._obj?.internalId === account?._obj?.internalId,
-          }"
-          @accountSelected="$emit('accountSelected', a)"
-          :isAccountSelected="
-            a?.active && a._obj.internalId === account?._obj?.internalId
-          "
-          :account="a"
-          showSubAccounts="true"
-          @refreshTransaction="refreshTransactions()"
-          @refreshAccounts="refreshBalance"
-        >
-          <template v-slot:name>{{
-            a.name ? a.name() : $gettext("Unavailable")
-          }}</template>
-        </BankAccountItem>
+        <div v-if="!isAccountActive">
+          <span>
+            {{
+              $gettext(
+                "The financial backend for this account is disabled, please contact an administrator"
+              )
+            }}</span
+          >
+        </div>
+        <div v-else>
+          <BankAccountItem
+            v-for="a in activeVirtualAccountsMiddleware"
+            class="mb-5"
+            :class="{
+              selected:
+                a?.active && a?._obj?.internalId === account?._obj?.internalId,
+            }"
+            @accountSelected="$emit('accountSelected', a)"
+            :isAccountSelected="
+              a?.active && a._obj.internalId === account?._obj?.internalId
+            "
+            :account="a"
+            showSubAccounts="true"
+            @refreshTransaction="refreshTransactions()"
+            @refreshAccounts="refreshBalance"
+          >
+            <template v-slot:name>{{
+              a.name ? a.name() : $gettext("Unavailable")
+            }}</template>
+          </BankAccountItem>
+        </div>
       </div>
     </div>
+
     <div
       class="inactive section-card"
       v-if="inactiveVirtualAccounts.length > 0"
@@ -138,6 +156,28 @@
       </p>
       <BankAccountItem
         v-for="account in inactiveVirtualAccounts"
+        :account="account"
+      >
+        <template v-slot:name>{{ account.name() }}</template>
+      </BankAccountItem>
+    </div>
+
+    <div
+      class="inactive section-card"
+      v-if="pathologicalVirtualAccounts.length > 0"
+    >
+      <h2 class="custom-card-title">
+        {{ $gettext("Disabled accounts") }}
+      </h2>
+      <p>
+        {{
+          $gettext(
+            "The accounts listed below are disabled, if this is not expected please contact an administrator"
+          )
+        }}
+      </p>
+      <BankAccountItem
+        v-for="account in pathologicalVirtualAccounts"
         :account="account"
       >
         <template v-slot:name>{{ account.name() }}</template>
@@ -170,15 +210,15 @@
       return {
         isWalletUploading: false,
         isAccountsLoadingRetrying: false,
+        isAccountActive: Boolean,
       }
     },
     components: {
       BankAccountItem,
       Loading,
     },
-    mounted() {
+    async mounted() {
       const accountsRefreshInterval = this.$config.accountsRefreshInterval || 90
-
       if (accountsRefreshInterval != -1) {
         if (interval) clearInterval(interval)
 
@@ -210,6 +250,7 @@
         "inactiveVirtualAccounts",
         "getBackends",
         "getUnconfiguredBackends",
+        "pathologicalVirtualAccounts",
       ]),
       ...mapModuleState("lokapi", [
         "accountsLoading",
@@ -252,7 +293,6 @@
               a?.active && a?._obj.internalId === this.account?._obj.internalId
           )
           const balance = account?.bal
-
           if (balanceOrig === balance) {
             if (Date.now() - startTime < maxDuration) {
               setTimeout(checkBalance, 200)

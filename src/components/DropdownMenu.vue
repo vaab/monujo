@@ -11,7 +11,8 @@
           ml-2
         "
         aria-haspopup="true"
-        :aria-controls="`dropdown-${object.backend}-menu`"
+        :aria-controls="`dropdown-${object.dropDownId}-menu`"
+        @click.stop="toggleDropdown"
       >
         <span class="icon">
           <fa-icon class="qrcode-icon" icon="ellipsis-v" />
@@ -20,7 +21,7 @@
     </div>
     <div
       class="dropdown-menu"
-      :id="`dropdown-${object.backend}-menu`"
+      :id="`dropdown-${object.dropDownId}-menu`"
       role="menu"
     >
       <div class="dropdown-content">
@@ -29,7 +30,7 @@
           :key="item.label"
           href="#"
           class="dropdown-item is-flex"
-          @click="item.action(this)"
+          @click.prevent="item.action(this)"
         >
           <div class="mr-1 icon-container">
             <fa-icon :icon="item.icon" />
@@ -89,16 +90,15 @@
       }
     },
     mounted() {
-      this.$el
-        ?.querySelector(".button-contextual-menu")
-        ?.addEventListener("click", (event: any) => {
-          event.stopPropagation()
-          this.$el.classList.toggle("is-active")
-        })
       this.handleCloseContextualMenu = () => {
         this.$el.classList.remove("is-active")
       }
       document.addEventListener("click", this.handleCloseContextualMenu)
+    },
+    methods: {
+      toggleDropdown() {
+        this.$el.classList.toggle("is-active")
+      },
     },
   })
   export default class DropdownMenu extends Vue {}

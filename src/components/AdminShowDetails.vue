@@ -1,5 +1,8 @@
 <template>
-  <div class="modal is-active">
+  <div
+    class="modal is-active"
+    v-show="$modal.modals.value.includes($options.name)"
+  >
     <div class="modal-background"></div>
     <div class="modal-card" tabindex="0">
       <header class="modal-card-head">
@@ -16,7 +19,11 @@
         </p>
         <button class="delete" aria-label="close" @click="close()"></button>
       </header>
-      <component :is="current.componentName" v-bind="current.params" />
+      <component
+        class="modal-body"
+        :is="current.componentName"
+        v-bind="current.params"
+      />
       <footer class="modal-card-foot is-justify-content-flex-end"></footer>
     </div>
   </div>
@@ -29,7 +36,6 @@
 
   import RecipientTechnicalDetails from "./RecipientTechnicalDetails.vue"
   import TransactionList from "./TransactionList.vue"
-
   @Options({
     name: "AdminShowDetails",
     components: {

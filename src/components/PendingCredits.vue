@@ -18,14 +18,7 @@
       }}
     </p>
   </div>
-
-  <p
-    class="notification is-default"
-    v-else-if="topUpsPendingForApproval.length === 0"
-  >
-    {{ $gettext("No top up request waiting for approval") }}
-  </p>
-  <div>
+  <div v-else-if="topUpsPendingForApproval.length != 0">
     <div class="section-card">
       <h2 class="custom-card-title title-card">
         {{ $gettext("Top up requests waiting for approval") }}
@@ -66,6 +59,7 @@
     components: {
       TransactionItem,
     },
+    emits: ["hasCredits"],
     data() {
       return {
         hasLoadingError: false,
@@ -124,6 +118,7 @@
               return e
             }
           )
+          this.$emit("hasCredits", this.topUpsPendingForApproval.length > 0)
         }
       ),
       refreshTransaction() {

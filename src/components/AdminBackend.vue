@@ -1,68 +1,129 @@
 <template>
   <div class="container">
-    <div>
-      <div class="item mb-2">
-        <div class="title-card">
-          {{ $gettext("General user account info") }}
+    <div class="item mb-2">
+      <div class="title-card">
+        {{ $gettext("General user account info") }}
+      </div>
+      <div class="recipient-actions-row">
+        <div class="recipient-item">
+          <RecipientItem
+            :recipient="recipient"
+            :hideAdminButton="true"
+            :toggleRefreshBadge="toggleRefreshBadge"
+          />
         </div>
-        <RecipientItem :recipient="recipient" :hideAdminButton="true" />
-
-        <div class="mt-2">
-          <a
-            @click="
-              $modal.open('AdminShowDetails', {
-                componentName: 'RecipientTechnicalDetails',
-                params: { administrativeBackendId, walletUri },
-              })
-            "
-            class="button is-default is-rounded"
-          >
-            <span
-              :class="{ hide: accountsLoading || isAccountsLoadingRetrying }"
-            >
-              {{ $gettext("Show more info") }}
-            </span>
-          </a>
-          <a
-            v-if="userAccount._obj"
-            @click="
-              $modal.open('TransactionListModal', {
-                componentName: 'TransactionList',
-                params: { recipient, account: userAccount, showAll: true },
-              })
-            "
-            class="button is-default is-rounded ml-2"
-          >
-            <span
-              :class="{ hide: accountsLoading || isAccountsLoadingRetrying }"
-            >
-              {{ $gettext("Show transactions") }}
-            </span>
-          </a>
+        <div class="recipient-dropdown">
+          <DropdownMenu :object="recipient" />
         </div>
       </div>
-      <div class="item mb-2">
-        <div class="title-card">
-          {{ $gettext("User account") }}
-        </div>
-
-        <div
-          class="bank-account-item"
-          :class="{
-            active: userAccount.active,
-          }"
+    </div>
+    <div class="item mb-4">
+      <div class="title-card">
+        {{ $gettext("User account") }}
+      </div>
+      <div
+        class="bank-account-item"
+        :class="{
+          active: userAccount.active,
+        }"
+      >
+        <BankAccountItem
+          :account="userAccount"
+          :showSubAccounts="true"
+          :disableDropDown="false"
+          :isAccountSelected="true"
+          :toggleRefreshBadge="toggleRefreshBadge"
         >
-          <BankAccountItem
-            :account="userAccount"
-            :showSubAccounts="true"
-            :disableDropDown="false"
-            :isAccountSelected="true"
-          >
-            <template v-slot:name>{{
-              userAccount.name ? userAccount.name() : $gettext("Unavailable")
-            }}</template>
-          </BankAccountItem>
-        </div>
+          <template v-slot:name>{{
+            userAccount.name ? userAccount.name() : $gettext("Unavailable")
+          }}</template>
+        </BankAccountItem>
+      </div>
+    </div>
+
+    <div class="item mb-2">
+      <div class="title-card">
+        {{ $gettext("Account actions") }}
+      </div>
+      <div class="section-card mt-2">
+        <form @submit.prevent="onSaveAccountChanges">
+          <div class="field account-action-row">
+            <label class="account-action-label">{{
+              $gettext("Account type:")
+            }}</label>
+            <div class="control account-action-control">
+              <DropdownButton
+                :options="[
+                  { value: 'professional', label: $gettext('Professional') },
+                  { value: 'personal', label: $gettext('Personal') },
+                ]"
+                customWidth="10em"
+                v-model="accountForm.accountType"
+              />
+            </div>
+          </div>
+          <div class="field account-action-row">
+            <label class="account-action-label">{{
+              $gettext("Account status: ")
+            }}</label>
+            <div class="is-flex is-align-items-center account-action-control">
+              <label class="switch mr-2">
+                <input type="checkbox" v-model="accountForm.status" />
+                <span class="slider round"></span>
+              </label>
+              <span class="has-text-weight-medium">
+                {{
+                  accountForm.status
+                    ? $gettext("Enabled")
+                    : $gettext("Disabled")
+                }}
+              </span>
+            </div>
+          </div>
+          <div class="field account-action-row account-action-column">
+            <label class="account-action-label barter-label">{{
+              $gettext("Mutual credit balance limits:")
+            }}</label>
+            <div class="currency-limit-fields ml-4">
+              <div class="field currency-limit-field">
+                <label class="currency-limit-label">
+                  {{ $gettext("Maximum allowed") }}
+                </label>
+                <div class="currency-limit-input">
+                  <div class="control">
+                    <input
+                      class="input"
+                      :class="{ 'is-danger': negativeLimitError }"
+                      type="number"
+                      v-model="accountForm.highLimit"
+                    />
+                  </div>
+                  <div v-if="negativeLimitError" class="help is-danger">
+                    {{ negativeLimitError }}
+                  </div>
+                </div>
+              </div>
+              <div class="field currency-limit-field">
+                <label class="currency-limit-label">
+                  {{ $gettext("Minimum allowed") }}
+                </label>
+                <div class="currency-limit-input">
+                  <div class="control">
+                    <input
+                      class="input"
+                      :class="{ 'is-danger': positiveLimitError }"
+                      type="number"
+                      v-model="accountForm.lowLimit"
+                    />
+                  </div>
+                  <div v-if="positiveLimitError" class="help is-danger">
+                    {{ positiveLimitError }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -77,6 +138,8 @@
   import { mapGetters } from "vuex"
   import TransactionList from "./TransactionList.vue"
   import { UIError } from "../exception"
+  import DropdownButton from "./DropdownButton.vue"
+  import DropdownMenu from "@/components/DropdownMenu.vue"
 
   import UseBatchLoading from "@/services/UseBatchLoading"
   import applyDecorators from "@/utils/applyDecorators"
@@ -94,6 +157,8 @@
         recipient: {},
         backend: {},
         option: null,
+        accountForm: {},
+        initialAccountForm: {},
       }
     },
     components: {
@@ -101,46 +166,187 @@
       RecipientItem,
       RecipientSelector,
       TransactionList,
+      DropdownButton,
+      DropdownMenu,
     },
+    emits: ["account-form-change"],
     props: {
-      administrativeBackendId: String,
-      walletUri: String,
-      backend: Object,
-      currency: Object,
+      toggleRefreshBadge: Boolean,
+      selectedRecipient: Object,
+    },
+    async created() {
+      this.accountForm.accountType = "professional"
     },
     async mounted() {
-      try {
-        this.recipient = await this.getRecipientByUri()
-      } catch (err: any) {
-        throw new UIError(
-          this.$gettext(
-            "An error occured while retrieving recipient information"
-          ),
-          err
-        )
-      }
+      await this.getRecipient()
+      await this.refreshAccounts()
 
-      try {
-        this.userAccount = await this.getAccount()
-      } catch (err: any) {
-        throw new UIError(
-          this.$gettext(
-            "An error occured while retrieving account information"
-          ),
-          err
-        )
-      }
+      await this.initializeAccountForm()
     },
     computed: {
       ...mapGetters(["activeVirtualAccounts"]),
+      isAccountFormChanged() {
+        return (
+          this.accountForm.status !== this.initialAccountForm.status ||
+          this.accountForm.accountType !==
+            this.initialAccountForm.accountType ||
+          this.accountForm.highLimit !== this.initialAccountForm.highLimit ||
+          this.accountForm.lowLimit !== this.initialAccountForm.lowLimit
+        )
+      },
+      negativeLimitError() {
+        const value = this.parseLimitValue(this.accountForm.highLimit)
+        if (value === null || value < 0) {
+          return this.$gettext("Maximum limit must be zero or greater.")
+        } else {
+          return false
+        }
+      },
+      positiveLimitError() {
+        const value = this.parseLimitValue(this.accountForm.lowLimit)
+        if (value === null || value > 0) {
+          return this.$gettext("Minimum limit must be zero or less.")
+        } else {
+          return false
+        }
+      },
+    },
+    watch: {
+      accountForm: {
+        handler() {
+          this.emitAccountFormChange()
+        },
+        deep: true,
+      },
+      async toggleRefreshBadge() {
+        await this.getRecipient()
+        await this.refreshAccounts()
+        await this.initializeAccountForm()
+      },
     },
     methods: {
+      onAccountSelected(account: any) {
+        this.userAccount = account
+      },
+      async getRecipient() {
+        try {
+          this.recipient = await this.getRecipientByUri()
+        } catch (err: any) {
+          throw new UIError(
+            this.$gettext(
+              "An error occured while retrieving recipient information"
+            ),
+            err
+          )
+        }
+      },
+      async fetchMutualCreditLimits() {
+        let accounts
+        try {
+          accounts = await this.$lokapi.getAccountfromRecipient(this.recipient)
+        } catch (err: any) {
+          console.error(
+            "An unexpected server error occurred while fetching mutual credit limits",
+            err
+          )
+          this.$msg.error(
+            this.$gettext(
+              "An unexpected server error occurred while fetching mutual credit limits"
+            )
+          )
+        }
+        let cmAccount = accounts.subAccounts.find(
+          (acc: any) => acc._obj.type === "Cm"
+        )
+
+        let highLimit, lowLimit
+
+        if (cmAccount) {
+          try {
+            highLimit = await cmAccount._obj.getHighLimit()
+            lowLimit = await cmAccount._obj.getLowLimit()
+          } catch (err: any) {
+            console.error(
+              "An unexpected server error occurred while fetching mutual credit limits",
+              err
+            )
+            this.$msg.error(
+              this.$gettext(
+                "An unexpected server error occurred while fetching mutual credit limits"
+              )
+            )
+          }
+        }
+        return { highLimit, lowLimit }
+      },
+      async initializeAccountForm() {
+        const accountType = this.userAccount.isBusinessForFinanceBackend
+          ? "professional"
+          : "personal"
+        const status = !!this.userAccount.isActiveAccount
+
+        let { highLimit, lowLimit } = await this.fetchMutualCreditLimits()
+
+        this.accountForm = {
+          status,
+          accountType,
+          highLimit,
+          lowLimit,
+        }
+        this.initialAccountForm = { ...this.accountForm }
+        this.emitAccountFormChange()
+      },
+
+      emitAccountFormChange() {
+        this.$emit("accountFormChange", {
+          form: { ...this.accountForm },
+          isChanged: this.isAccountFormChanged,
+          isFormValid: !this.negativeLimitError && !this.positiveLimitError,
+        })
+      },
+
+      openCreditMoney() {
+        this.$modal.open("MoneyTransferModal", {
+          recipient: this.recipient,
+          account: this.userAccount,
+          transactionType: "adminCredit",
+          refreshAccounts: () => this.refreshAccounts(),
+          refreshTransaction: () => this.refreshTransactions(),
+        })
+      },
+      refreshTransactions() {
+        //not userd for now
+      },
+      async refreshAccounts() {
+        try {
+          this.userAccount = await this.$lokapi.getAccountfromRecipient(
+            this.recipient
+          )
+        } catch (err: any) {
+          throw new UIError(
+            this.$gettext(
+              "An error occured while retrieving account information"
+            ),
+            err
+          )
+        }
+      },
+      parseLimitValue(value: any) {
+        if (value === "" || value === null || value === undefined) {
+          return null
+        }
+        if (typeof value === "number") {
+          return Number.isNaN(value) ? null : value
+        }
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      },
+
       getRecipientByUri: applyDecorators(
         [showSpinnerMethod(".title-card")],
         async function (this: any) {
           const backends = await this.$lokapi.getBackends()
-
-          const splitArray = this.walletUri.split("/")
+          const splitArray = this.selectedRecipient.internalId.split("/")
           const walletIdent = splitArray.pop()
           const currencyUri = splitArray.join("/")
           const [_, currencyIdent] = currencyUri.split(":")
@@ -152,8 +358,12 @@
           let recipient
           try {
             recipient = await this.backend.searchRecipientByUri({
-              rp: this.administrativeBackendId,
-              rpb: `${this.walletUri.split(":")[0] + ":" + walletIdent}`,
+              rp: this.selectedRecipient.id,
+              rpb: `${
+                this.selectedRecipient.internalId.split(":")[0] +
+                ":" +
+                walletIdent
+              }`,
             })
           } catch (err) {
             this.$msg.error(
@@ -161,142 +371,7 @@
             )
             throw err
           }
-
           return recipient
-        }
-      ),
-
-      getAccount: applyDecorators(
-        [showSpinnerMethod(".container")],
-        async function (this: any) {
-          const virtualAccountTree: any[] = []
-          const sortOrder = (a: any, b: any) =>
-            `${a.backend}${a.name}` < `${b.backend}${b.name}` ? -1 : 1
-          const userAccount = await this.$lokapi.getUserAccountsFromWalletUri(
-            this.walletUri
-          )
-
-          let vals: any[] = await Promise.allSettled([
-            this.$lokapi.getBankAccountName(userAccount),
-            userAccount.getBalance
-              ? userAccount.getBalance().catch((e: any) => e)
-              : "-.---,--",
-            userAccount.getSymbol
-              ? userAccount.getSymbol().catch((e: any) => e)
-              : "",
-            userAccount.getAccounts().catch((e: any) => e),
-            userAccount.isBusinessForFinanceBackend().catch((e: any) => e),
-          ])
-          vals = vals.filter(isFulfilled).map((v) => v.value)
-          const exceptions = vals.filter((v) => v instanceof Error)
-          const accountErrors: any[] = []
-          if (exceptions.length > 0) {
-            for (const exception of exceptions) {
-              if (accountErrors.every((e) => e !== exception)) {
-                accountErrors.push(exception)
-              }
-            }
-            for (const exception of accountErrors) {
-              console.log(`Exception: ${exception}`)
-            }
-            throw Error("Failed to retrieve bank account from user account")
-          }
-
-          const [name, bal, curr, moneyAccounts, isBusinessForFinanceBackend] =
-            vals
-          const userAccountData = {
-            name,
-            bal,
-            curr,
-            backend: userAccount.internalId.split(":")[0],
-            minCreditAmount: userAccount.parent.minCreditAmount,
-            maxCreditAmount: userAccount.parent.maxCreditAmount,
-            //walletData: getWalletData(userAccount),
-            //safeWalletRecipient: getSafeWalletRecipient(userAccount.parent),
-            userAccountId: userAccount.internalId,
-            currencyId: userAccount.parent.internalId,
-            isBusinessForFinanceBackend,
-            active: userAccount.active, // FTM only the UserAccount is active or not
-            id: userAccount.internalId,
-            isTopUpAllowed: userAccount.isTopUpAllowed,
-            subAccounts: [],
-            _obj: userAccount,
-            creditable: false,
-            isVirtualRoot: false,
-            administrativeBackendId: this.administrativeBackendId,
-          }
-
-          await Promise.allSettled(
-            (moneyAccounts || []).map(async (account: any) => {
-              const vals = await Promise.allSettled([
-                this.$lokapi.getBankAccountName(account),
-                account.getBalance(),
-                account.getSymbol(),
-                account.isBusinessForFinanceBackend(),
-              ])
-              const [name, bal, curr, isBusinessForFinanceBackend] = vals.map(
-                (a) => (<any>a).value
-              )
-              const accountData = {
-                name,
-                bal,
-                curr,
-                backend: account.parent.internalId.split(":")[0],
-                minCreditAmount: account.parent.parent.minCreditAmount,
-                maxCreditAmount: account.parent.parent.maxCreditAmount,
-                //walletData: getWalletData(account.parent),
-                //safeWalletRecipient: getSafeWalletRecipient(
-                //account.parent.parent
-                //),
-                userAccountId: account.parent.internalId,
-                currencyId: account.parent.parent.internalId,
-                active: account.parent.active, // FTM only the UserAccount is active or not
-                id: account.internalId,
-                isTopUpAllowed: userAccount.isTopUpAllowed,
-                _obj: account,
-                creditable: account.creditable,
-                isBusinessForFinanceBackend:
-                  userAccountData.isBusinessForFinanceBackend
-                    ? false
-                    : isBusinessForFinanceBackend,
-                isBarter: account.isBarter,
-                isVirtualRoot: false,
-                administrativeBackendId: this.administrativeBackendId,
-              }
-              //allMoneyAccounts.push(accountData)
-              if (moneyAccounts.length === 1) {
-                // replace the userAccount
-                accountData.id = userAccountData.id
-                accountData.isVirtualRoot = true
-                replaceOrInsertElt(
-                  virtualAccountTree,
-                  accountData,
-                  (a: any) => userAccountData.id === a.id,
-                  sortOrder
-                )
-              } else {
-                // Add as subAccounts
-                replaceOrInsertElt(
-                  userAccountData.subAccounts,
-                  accountData,
-                  (a: any) => account.internalId === a.id,
-                  sortOrder
-                )
-              }
-            })
-          )
-
-          if (moneyAccounts && moneyAccounts.length !== 1) {
-            userAccountData.isVirtualRoot = true
-            replaceOrInsertElt(
-              virtualAccountTree,
-              userAccountData,
-              (a: any) => userAccount.internalId === a.id,
-              sortOrder
-            )
-          }
-
-          return virtualAccountTree[0]
         }
       ),
     },
@@ -305,6 +380,7 @@
 </script>
 <style lang="scss" scoped>
   @import "../assets/custom-variables";
+  @import "@/assets/switch-prefs";
   .container {
     background-color: white;
     overflow-wrap: break-word;
@@ -316,8 +392,71 @@
     padding: 1em;
   }
 
+  .account-action-row {
+    display: flex;
+    align-items: left;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .account-action-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    margin: auto;
+  }
+
+  .account-action-control {
+    align-items: start;
+    width: 100%;
+  }
+
+  .account-action-column {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .currency-limit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .currency-limit-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .currency-limit-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+  }
+
+  .currency-limit-label {
+    margin-bottom: 0;
+    min-width: fit-content;
+    margin-top: 0.5em;
+  }
+
   .title-card {
     font-size: 1em;
     font-weight: bold;
+  }
+
+  .recipient-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .submit-button {
+    justify-content: end;
+  }
+  .barter-label {
+    margin-left: 0rem;
   }
 </style>

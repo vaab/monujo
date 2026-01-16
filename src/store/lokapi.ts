@@ -286,6 +286,11 @@ export function lokapiStoreFactory(lokApiService: any, passwordUtils: any) {
       availableVirtualAccounts: (state: any) => {
         return state.virtualAccountTree.filter((a: any) => a.active === true)
       },
+      pathologicalVirtualAccounts: (state: any) => {
+        return state.virtualAccountTree.filter(
+          (a: any) => a.isActiveAccount === false
+        )
+      },
       activeVirtualAccounts: (state: any) => {
         return state.virtualAccountTree.filter(
           (a: any) => a?.active === true || a instanceof Array

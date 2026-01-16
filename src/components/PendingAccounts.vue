@@ -95,6 +95,7 @@
 
   @Options({
     name: "PendingAccounts",
+    emits: ["hasAccounts"],
     data() {
       return {
         hasLoadingError: false,
@@ -219,6 +220,7 @@
               err
             )
           }
+          this.$emit("hasAccounts", this.pendingUserAccounts.length > 0)
         }
       ),
     },

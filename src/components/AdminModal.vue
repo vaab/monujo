@@ -45,11 +45,38 @@
           <AdminBackend
             v-if="administrativeBackendId && financialBackendId"
             :administrativeBackendId="administrativeBackendId"
+            :selectedRecipient="selectedRecipient"
             :walletUri="financialBackendId"
-            :currency="currency"
+            :toggleRefreshBadge="toggleRefreshBadge"
+            ref="adminBackend"
+            @accountFormChange="handleAccountFormChange"
           />
+          <div class="change-account"></div>
         </section>
-        <footer class="modal-card-foot is-justify-content-flex-end"></footer>
+        <footer
+          class="
+            modal-card-foot
+            custom-modal-card-foot
+            is-justify-content-flex-end
+          "
+        >
+          <button
+            type="button"
+            class="button is-pay is-rounded mr-2"
+            @click="handleCreditMoney"
+            :disabled="!isActiveAccount"
+          >
+            {{ $gettext("Credit money") }}
+          </button>
+          <button
+            type="button"
+            class="button is-pay is-rounded"
+            :disabled="!isAccountFormChanged || !isFormValid"
+            @click="handleSaveAccountChanges"
+          >
+            {{ $gettext("Save changes") }}
+          </button>
+        </footer>
       </div>
     </template>
   </div>
@@ -57,6 +84,12 @@
 <script lang="ts">
   import { Options, Vue } from "vue-class-component"
   import { mapModuleState } from "@/utils/vuex"
+  import { UIError } from "../exception"
+  import { mapGetters } from "vuex"
+
+  import { showSpinnerMethod, replaceWithLoader } from "@/utils/showSpinner"
+  import applyDecorators from "@/utils/applyDecorators"
+  import { debounceMethod, debounceMethodWithOpts } from "@/utils/debounce"
 
   import RecipientSelector from "@/components/RecipientSelector.vue"
 
@@ -64,7 +97,7 @@
   import BankAccountItem from "./BankAccountItem.vue"
 
   @Options({
-    name: "MoneyTransferModal",
+    name: "AdminModal",
     components: {
       RecipientSelector,
       BankAccountItem,
@@ -75,6 +108,11 @@
         administrativeBackendId: null,
         financialBackendId: null,
         currency: null,
+        accountForm: null,
+        isAccountFormChanged: false,
+        isFormValid: false,
+        toggleRefreshBadge: false,
+        isActiveAccount: false,
       }
     },
     created() {
@@ -90,6 +128,8 @@
     },
     computed: {
       ...mapModuleState("lokapi", ["userProfile"]),
+      ...mapGetters(["availableVirtualAccounts"]),
+
       // not useed, only comchain supported for now
       // current() {
       //   let backendName = this.financialBackendId.split(":")[0]
@@ -115,10 +155,54 @@
       // },
     },
     methods: {
-      handleClickRecipient(data: any): void {
+      async handleClickRecipient(data: any): Promise<void> {
+        this.selectedRecipient = data.recipient
+        const account = await this.$lokapi.getAccountfromRecipient(
+          this.selectedRecipient
+        )
+        this.isActiveAccount = account.isActiveAccount
         this.administrativeBackendId = data.recipient.id
         this.financialBackendId = data.recipient.internalId
         this.$modal.next()
+      },
+
+      async handleAccountFormChange(payload: {
+        form: Record<string, any>
+        isChanged: boolean
+        isFormValid: boolean
+      }) {
+        this.accountForm = payload.form
+        this.isAccountFormChanged = payload.isChanged
+        this.isFormValid = payload.isFormValid
+      },
+
+      handleSaveAccountChanges: applyDecorators(
+        [showSpinnerMethod(".modal-card")],
+        async function (this: any): Promise<void> {
+          const { status, accountType, highLimit, lowLimit } = this.accountForm
+          let tx
+          try {
+            tx = await this.selectedRecipient.updateAccount(
+              status,
+              accountType,
+              lowLimit,
+              highLimit
+            )
+          } catch (err: any) {
+            throw new UIError(
+              this.$gettext("An error occured while updating account"),
+              err
+            )
+          }
+          this.toggleRefreshBadge = !this.toggleRefreshBadge
+          this.$msg.success(this.$gettext("Account successfully updated"))
+        }
+      ),
+      handleCreditMoney() {
+        const adminBackend = this.$refs.adminBackend as any
+        if (adminBackend) {
+          adminBackend.openCreditMoney()
+        }
       },
 
       setFocus(refLabel: string) {
@@ -130,7 +214,7 @@
       },
     },
   })
-  export default class MoneyTransferModal extends Vue {}
+  export default class AdminModal extends Vue {}
 </script>
 <style lang="scss" scoped>
   @import "@/assets/custom-variables";

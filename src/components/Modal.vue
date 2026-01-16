@@ -18,7 +18,6 @@
   import MoneyRequestModal from "./MoneyRequestModal.vue"
   import AdminModal from "./AdminModal.vue"
   import AdminShowDetails from "./AdminShowDetails.vue"
-
   @Options({
     name: "Modal",
     components: {

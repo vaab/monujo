@@ -1,7 +1,7 @@
 <template>
   <div
     class="modal is-active"
-    v-if="$modal.modal.value == $options.name"
+    v-show="$modal.modals.value.includes($options.name)"
     ref="transactions"
   >
     <div class="modal-background"></div>
@@ -17,8 +17,8 @@
         ></button>
       </header>
       <TransactionList
+        :account="selectedAccount"
         :recipient="selectedRecipient"
-        :account="account"
         ref="txList"
       />
       <footer
@@ -101,15 +101,14 @@
     data(this: any) {
       return {
         isTransactionsLoading: false,
-        account: null,
         hasMoreThanOneSubAccount: null,
         selectedRecipient: null,
+        selectedAccount: null,
       }
     },
 
     created() {
-      this.account = this.$modal.args.value[0].params.account
-      this.selectedRecipient = this.$modal.args.value[0].params.recipient
+      this.selectedAccount = this.$modal.args.value[0].params.account
     },
     async mounted() {
       this.setFocus()
@@ -134,7 +133,7 @@
       },
     },
   })
-  export default class TheTransactionList extends Vue {}
+  export default class TransactionListModal extends Vue {}
 </script>
 <style lang="scss">
   @import "@/assets/custom-variables";
